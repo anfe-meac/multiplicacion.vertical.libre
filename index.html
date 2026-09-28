@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplicación Vertical Dinámica (hasta 4 × 4 cifras)</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --step1-color: #ea580c;
+            --step2-color: #0284c7;
+            --step3-color: #7c3aed;
+            --step4-color: #db2777;
+            --step-sum: #16a34a;
+            --grid-line: #94a3b8;
+            --grid-bg: #f8fafc;
+            --cell-size: 52px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+            appearance: textfield;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: #f1f5f9;
+            color: #1e293b;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 14px;
+        }
+
+        h1 {
+            font-size: 1.55rem;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        .config-bar {
+            background: white;
+            padding: 12px 20px;
+            border-radius: 14px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 700;
+        }
+
+        .input-group input {
+            padding: 6px 10px;
+            font-size: 1.15rem;
+            text-align: center;
+            font-weight: 800;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            outline: none;
+            width: 86px;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 9px 18px;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-rand { background: #475569; }
+        .btn-rand:hover { background: #334155; }
+
+        .workspace {
+            display: flex;
+            gap: 24px;
+            max-width: 1280px;
+            width: 100%;
+            background: white;
+            padding: 24px;
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+            align-items: flex-start;
+        }
+
+        .guide-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 720px;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+
+        .guide-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 14px;
+            background: #fafafa;
+            transition: all 0.25s;
+        }
+
+        .guide-card.active {
+            border-color: var(--primary);
+            background: #eef2ff;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.12);
+        }
+
+        .guide-card.completed {
+            border-color: #cbd5e1;
+            background: #f8fafc;
+            opacity: 0.85;
+        }
+
+        .guide-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            margin-bottom: 6px;
+        }
+
+        .badge-step {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.82rem;
+            font-weight: 900;
+        }
+
+        .guide-text {
+            font-size: 0.88rem;
+            line-height: 1.4;
+            color: #475569;
+        }
+
+        .note-blank {
+            background: #fffbeb;
+            border: 1px dashed #f59e0b;
+            color: #92400e;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        .notebook-stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding: 6px;
+            overflow-x: auto;
+        }
+
+        .grid-wrapper {
+            display: flex;
+            align-items: flex-start;
+            position: relative;
+        }
+
+        .grid-board {
+            position: relative;
+            display: grid;
+            background-color: var(--grid-bg);
+            border: 2px dashed var(--grid-line);
+        }
+
+        .grid-cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            border-right: 1.5px dashed var(--grid-line);
+            border-bottom: 1.5px dashed var(--grid-line);
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.7rem;
+            font-weight: 800;
+            position: relative;
+        }
+
+        .grid-cell.no-right { border-right: none; }
+        .grid-cell.no-bottom { border-bottom: none; }
+
+        .bar-mult, .bar-sum {
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: #0f172a;
+            z-index: 5;
+        }
+
+        .cell-input {
+            width: 36px;
+            height: 36px;
+            border: 2px solid #3b82f6;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.4rem;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: 800;
+            background: #ffffff;
+            color: #1e3a8a;
+            outline: none;
+            transition: all 0.15s;
+            position: relative;
+            z-index: 6;
+            margin-bottom: 2px;
+        }
+
+        .cell-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.25);
+        }
+
+        .carry-bubble {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #fef08a;
+            border: 1.5px solid #d97706;
+            color: #b45309;
+            font-size: 0.75rem;
+            font-family: system-ui, sans-serif;
+            font-weight: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            outline: none;
+            z-index: 12;
+            padding: 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+
+        .carry-bubble:focus {
+            background: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3);
+            transform: scale(1.15);
+        }
+
+        .finger-mask {
+            position: absolute;
+            width: calc(var(--cell-size) - 8px);
+            height: calc(var(--cell-size) - 8px);
+            background: rgba(254, 215, 170, 0.95);
+            border: 2px solid #ea580c;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            z-index: 4;
+            pointer-events: none;
+            transition: all 0.2s ease;
+        }
+
+        .annotations-column {
+            display: flex;
+            flex-direction: column;
+            padding-left: 10px;
+        }
+
+        .annotation-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.9rem;
+            font-weight: 800;
+            color: #64748b;
+            height: var(--cell-size);
+            white-space: nowrap;
+        }
+
+        .arrow-label {
+            color: #f97316;
+            font-size: 1.15rem;
+        }
+
+        .actions-row {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .feedback-banner {
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-align: center;
+            min-height: 24px;
+        }
+        .feedback-banner.success { color: #16a34a; }
+        .feedback-banner.error { color: #dc2626; }
+
+        @media (max-width: 980px) {
+            .workspace { flex-direction: column; align-items: center; }
+            .guide-panel { width: 100%; max-height: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>📐 Multiplicación Vertical Dinámica</h1>
+        <p class="subtitle">Multiplica libremente números de 1 a 4 cifras anotando las llevadas y los productos parciales.</p>
+    </header>
+
+    <div class="config-bar">
+        <div class="input-group">
+            <label>Multiplicando:</label>
+            <input type="text" inputmode="numeric" id="inA" value="354" maxlength="4">
+        </div>
+        <span>×</span>
+        <div class="input-group">
+            <label>Multiplicador:</label>
+            <input type="text" inputmode="numeric" id="inB" value="32" maxlength="4">
+        </div>
+        <button class="btn" onclick="iniciarEjercicio()">Comenzar 🚀</button>
+        <button class="btn btn-rand" onclick="ejercicioAzar()">🎲 Azar</button>
+    </div>
+
+    <div class="workspace">
+        <div class="guide-panel" id="guidePanel"></div>
+
+        <div class="notebook-stage">
+            <div class="grid-wrapper">
+                <div class="grid-board" id="gridBoard"></div>
+                <div class="annotations-column" id="annotationsCol"></div>
+            </div>
+
+            <div class="actions-row">
+                <button class="btn" id="btnCheck" onclick="verificarFaseActual()">Comprobar Paso 1 ✍️</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let A = 354;
+        let B = 32;
+
+        let numCols = 6;
+        let numRows = 5;
+        let numDigitsB = 2;
+        let digitsB = [];
+        let etapa = 1;
+        let totalEtapas = 3;
+
+        const colorsSteps = [
+            'var(--step1-color)',
+            'var(--step2-color)',
+            'var(--step3-color)',
+            'var(--step4-color)'
+        ];
+
+        const namesPlace = ['Unidad', 'Decena', 'Centena', 'Unidad de Millar'];
+
+        function ejercicioAzar() {
+            const lenA = Math.floor(Math.random() * 3) + 2; // 2 a 4 cifras
+            const lenB = Math.floor(Math.random() * 3) + 2; // 2 a 4 cifras
+
+            const minA = Math.pow(10, lenA - 1);
+            const maxA = Math.pow(10, lenA) - 1;
+            const minB = Math.pow(10, lenB - 1);
+            const maxB = Math.pow(10, lenB) - 1;
+
+            const rA = Math.floor(Math.random() * (maxA - minA + 1)) + minA;
+            const rB = Math.floor(Math.random() * (maxB - minB + 1)) + minB;
+
+            document.getElementById('inA').value = rA;
+            document.getElementById('inB').value = rB;
+            iniciarEjercicio();
+        }
+
+        function iniciarEjercicio() {
+            const inAVal = parseInt(document.getElementById('inA').value, 10);
+            const inBVal = parseInt(document.getElementById('inB').value, 10);
+
+            if (isNaN(inAVal) || isNaN(inBVal) || inAVal < 1 || inAVal > 9999 || inBVal < 1 || inBVal > 9999) {
+                alert("Por favor ingresa factores válidos de 1 a 4 cifras (1 a 9999).");
+                return;
+            }
+
+            A = inAVal;
+            B = inBVal;
+
+            const sA = A.toString();
+            const sB = B.toString();
+            const totalProd = A * B;
+            const sTotal = totalProd.toString();
+
+            numDigitsB = sB.length;
+            digitsB = sB.split('').map(Number).reverse(); // de menor a mayor peso
+
+            // Columnas requeridas: longitud del producto total + 1 de margen para el signo ×
+            numCols = Math.max(sA.length + 1, sB.length + 1, sTotal.length + 1);
+
+            // Filas: Fila 0 (Factor A), Fila 1 (Factor B), Filas 2..(1 + numDigitsB) (Parciales), Fila Total si numDigitsB > 1
+            numRows = numDigitsB > 1 ? 2 + numDigitsB + 1 : 2 + 1;
+            totalEtapas = numDigitsB > 1 ? numDigitsB + 1 : 1;
+
+            etapa = 1;
+
+            generarGuiasDidacticas();
+            construirCuadricula(sA, sB);
+            configurarFase(1);
+        }
+
+        function generarGuiasDidacticas() {
+            const panel = document.getElementById('guidePanel');
+            panel.innerHTML = '';
+
+            for (let i = 0; i < numDigitsB; i++) {
+                const stepNum = i + 1;
+                const digit = digitsB[i];
+                const place = namesPlace[i] || `Orden ${i + 1}`;
+                const stepColor = colorsSteps[i % colorsSteps.length];
+                const multiplierValue = digit * Math.pow(10, i);
+
+                const card = document.createElement('div');
+                card.className = `guide-card ${stepNum === 1 ? 'active' : ''}`;
+                card.id = `card-step${stepNum}`;
+
+                card.innerHTML = `
+                    <div class="guide-header">
+                        <div class="badge-step" style="background:${stepColor};">${stepNum}</div>
+                        <span style="color:${stepColor};">Paso ${stepNum}: Multiplicando por la ${place}</span>
+                    </div>
+                    <div class="guide-text">
+                        Multiplicamos <b>${A} × ${digit}</b> dígito a dígito de derecha a izquierda, anotando el resultado a partir de la columna de las <b>${place.toLowerCase()}s</b> y apuntando las llevadas en los círculos superiores.
+                    </div>
+                    ${i > 0 ? `
+                        <div class="note-blank">
+                            📌 <b>Desplazamiento:</b> Se dejan <b>${i}</b> casilla(s) en blanco a la derecha (equivale a multiplicar por${multiplierValue}).
+                        </div>
+                    ` : ''}
+                `;
+                panel.appendChild(card);
+            }
+
+            if (numDigitsB > 1) {
+                const sumStep = numDigitsB + 1;
+                const cardSum = document.createElement('div');
+                cardSum.className = 'guide-card';
+                cardSum.id = `card-step${sumStep}`;
+                cardSum.innerHTML = `
+                    <div class="guide-header">
+                        <div class="badge-step" style="background:var(--step-sum);">${sumStep}</div>
+                        <span style="color:var(--step-sum);">Paso ${sumStep}: Sumar Productos Parciales</span>
+                    </div>
+                    <div class="guide-text">
+                        Sumamos columna por columna los <b>${numDigitsB}</b> productos parciales obtenidos, anotando las llevadas de suma si se acumulan 10 o más.
+                    </div>
+                `;
+                panel.appendChild(cardSum);
+            }
+
+            const feedback = document.createElement('div');
+            feedback.className = 'feedback-banner';
+            feedback.id = 'feedback';
+            feedback.textContent = '¡Comencemos completando el Paso 1!';
+            panel.appendChild(feedback);
+        }
+
+        function construirCuadricula(sA, sB) {
+            const board = document.getElementById('gridBoard');
+            const annCol = document.getElementById('annotationsCol');
+
+            board.innerHTML = '';
+            annCol.innerHTML = '';
+
+            board.style.gridTemplateColumns = `repeat(${numCols}, var(--cell-size))`;
+            board.style.gridTemplateRows = `repeat(${numRows}, var(--cell-size))`;
+
+            // Líneas divisorias horizontales
+            const barMult = document.createElement('div');
+            barMult.className = 'bar-mult';
+            barMult.style.top = `calc(var(--cell-size) * 2 - 1.5px)`;
+            board.appendChild(barMult);
+
+            if (numDigitsB > 1) {
+                const barSum = document.createElement('div');
+                barSum.className = 'bar-sum';
+                barSum.style.top = `calc(var(--cell-size) * ${2 + numDigitsB} - 1.5px)`;
+                board.appendChild(barSum);
+            }
+
+            // Generar celdas de la cuadrícula
+            for (let r = 0; r < numRows; r++) {
+                for (let c = 0; c < numCols; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell';
+                    if (c === numCols - 1) cell.classList.add('no-right');
+                    if (r === numRows - 1) cell.classList.add('no-bottom');
+                    cell.id = `cell-${r}-${c}`;
+                    board.appendChild(cell);
+                }
+            }
+
+            // Fila 0: Multiplicando A alineado a la derecha
+            const startColA = numCols - sA.length;
+            for (let i = 0; i < sA.length; i++) {
+                document.getElementById(`cell-0-${startColA + i}`).textContent = sA[i];
+            }
+
+            // Fila 1: Multiplicador B alineado a la derecha + signo ×
+            const startColB = numCols - sB.length;
+            document.getElementById(`cell-1-0`).innerHTML = '<span style="font-size:1.4rem; align-self:center;">×</span>';
+            for (let i = 0; i < sB.length; i++) {
+                const cellB = document.getElementById(`cell-1-${startColB + i}`);
+                cellB.textContent = sB[i];
+                cellB.id = `cell-factorB-${sB.length - 1 - i}`; // indexado por peso (0 = unidad)
+            }
+
+            // Máscara / dedo para tapar cifras
+            const finger = document.createElement('div');
+            finger.className = 'finger-mask';
+            finger.id = 'fingerMask';
+            finger.textContent = '☝️';
+            board.appendChild(finger);
+
+            // Generar anotaciones laterales
+            for (let r = 0; r < numRows; r++) {
+                const ann = document.createElement('div');
+                ann.className = 'annotation-item';
+                ann.id = `ann-row-${r}`;
+
+                if (r >= 2 && r < 2 + numDigitsB) {
+                    const idxB = r - 2;
+                    const multVal = digitsB[idxB] * Math.pow(10, idxB);
+                    ann.innerHTML = `<span class="arrow-label">←</span> <span>${A} × ${multVal}</span>`;
+                } else if (numDigitsB > 1 && r === 2 + numDigitsB) {
+                    ann.innerHTML = `<span class="arrow-label" style="color:var(--step-sum);">=</span> <span style="color:var(--step-sum);">Total</span>`;
+                } else {
+                    ann.style.opacity = '0';
+                    ann.textContent = '-';
+                }
+                annCol.appendChild(ann);
+            }
+        }
+
+        function posicionarMascara(pasoIdx) {
+            const finger = document.getElementById('fingerMask');
+            if (pasoIdx >= numDigitsB) {
+                finger.style.display = 'none';
+                return;
+            }
+
+            // En el paso pasoIdx, se multiplica por digitsB[pasoIdx].
+            // Tapamos la cifra adyacente para concentrar la atención.
+            const targetPeso = pasoIdx === 0 ? 1 : 0;
+            const targetCell = document.getElementById(`cell-factorB-${targetPeso}`);
+
+            if (targetCell) {
+                const colIdx = parseInt(targetCell.id.split('-')[1], 10);
+                const offsetLeft = targetCell.offsetLeft;
+                const offsetTop = targetCell.offsetTop;
+                finger.style.display = 'flex';
+                finger.style.left = `${offsetLeft + 4}px`;
+                finger.style.top = `${offsetTop + 4}px`;
+            } else {
+                finger.style.display = 'none';
+            }
+        }
+
+        function configurarFase(faseNum) {
+            etapa = faseNum;
+            actualizarTarjetasGuia(faseNum);
+            posicionarMascara(faseNum - 1);
+
+            const btnCheck = document.getElementById('btnCheck');
+            btnCheck.disabled = false;
+
+            if (faseNum <= numDigitsB) {
+                // Fila de producto parcial
+                const idxB = faseNum - 1;
+                const digit = digitsB[idxB];
+                const row = 2 + idxB;
+                const prod = A * digit;
+                const sProd = prod.toString();
+
+                btnCheck.textContent = `Comprobar Paso ${faseNum} ✍️`;
+                mostrarFeedback(`Multiplica ${A} × ${digit}. Anota las llevadas arriba y el producto desde las ${namesPlace[idxB].toLowerCase()}s.`, false);
+
+                // Colocar cuadros en blanco a la derecha si corresponde
+                for (let k = 0; k < idxB; k++) {
+                    const colBlank = numCols - 1 - k;
+                    const cellB = document.getElementById(`cell-${row}-${colBlank}`);
+                    cellB.innerHTML = '<span style="color:#94a3b8; font-size:1.1rem; align-self:center;" title="Casilla en blanco">⬜</span>';
+                }
+
+                // Generar inputs para el producto parcial
+                const digitsA = A.toString().split('').map(Number).reverse();
+                let carryVal = 0;
+                const requiredCarries = [];
+
+                for (let j = 0; j < digitsA.length; j++) {
+                    const curMul = digitsA[j] * digit + carryVal;
+                    carryVal = Math.floor(curMul / 10);
+                    requiredCarries.push(carryVal);
+                }
+
+                for (let i = 0; i < sProd.length; i++) {
+                    const col = numCols - 1 - idxB - i;
+                    const cell = document.getElementById(`cell-${row}-${col}`);
+                    const hasCarry = (i < digitsA.length - 1 && requiredCarries[i] > 0);
+
+                    cell.innerHTML = `
+                        ${hasCarry ? `<input type="text" inputmode="numeric" id="carry-p${faseNum}-${i}" class="carry-bubble" title="Llevada" maxlength="1">` : ''}
+                        <input type="text" inputmode="numeric" id="inp-p${faseNum}-${i}" class="cell-input" maxlength="1">
+                    `;
+                }
+
+            } else {
+                // Fase final: Suma
+                const rowSum = 2 + numDigitsB;
+                const total = A * B;
+                const sTotal = total.toString();
+
+                btnCheck.textContent = "Comprobar Suma Final 🎉";
+                mostrarFeedback("Suma verticalmente columna por columna anotando las llevadas de suma.", false);
+
+                for (let i = 0; i < sTotal.length; i++) {
+                    const col = numCols - 1 - i;
+                    const cell = document.getElementById(`cell-${rowSum}-${col}`);
+                    cell.innerHTML = `
+                        <input type="text" inputmode="numeric" id="carry-sum-${i}" class="carry-bubble" title="Llevada de suma" maxlength="1">
+                        <input type="text" inputmode="numeric" id="inp-sum-${i}" class="cell-input" maxlength="1">
+                    `;
+                }
+            }
+        }
+
+        function verificarFaseActual() {
+            if (etapa <= numDigitsB) {
+                const idxB = etapa - 1;
+                const digit = digitsB[idxB];
+                const prod = A * digit;
+                const sProd = prod.toString();
+                const row = 2 + idxB;
+
+                const digitsA = A.toString().split('').map(Number).reverse();
+                let carryVal = 0;
+
+                // Verificar llevadas intermedias
+                for (let j = 0; j < digitsA.length - 1; j++) {
+                    const curMul = digitsA[j] * digit + carryVal;
+                    carryVal = Math.floor(curMul / 10);
+
+                    if (carryVal > 0) {
+                        const carryIn = parseInt(document.getElementById(`carry-p${etapa}-${j}`).value, 10) || 0;
+                        if (carryIn !== carryVal) {
+                            mostrarFeedback(`Revisa la llevada en el dígito de las ${namesPlace[j] || 'posiciones'}s: llevas ${carryVal}.`, true);
+                            return;
+                        }
+                    }
+                }
+
+                // Verificar dígitos del resultado parcial
+                const revProd = sProd.split('').reverse();
+                for (let i = 0; i < revProd.length; i++) {
+                    const inpVal = parseInt(document.getElementById(`inp-p${etapa}-${i}`).value, 10);
+                    const expVal = parseInt(revProd[i], 10);
+
+                    if (inpVal !== expVal) {
+                        mostrarFeedback(`Revisa la cifra en la columna ${i + 1} de este producto parcial.`, true);
+                        return;
+                    }
+                }
+
+                // Fijar números verificados
+                for (let i = 0; i < revProd.length; i++) {
+                    const col = numCols - 1 - idxB - i;
+                    document.getElementById(`cell-${row}-${col}`).textContent = revProd[i];
+                }
+
+                if (etapa < totalEtapas) {
+                    mostrarFeedback(`¡Paso ${etapa} correcto! Pasemos a la siguiente cifra.`, false);
+                    setTimeout(() => configurarFase(etapa + 1), 700);
+                } else {
+                    finalizarMultiplicacion();
+                }
+
+            } else {
+                // Verificar Suma
+                const total = A * B;
+                const sTotal = total.toString();
+                const revTotal = sTotal.split('').reverse();
+                const rowSum = 2 + numDigitsB;
+
+                for (let i = 0; i < revTotal.length; i++) {
+                    const inpVal = parseInt(document.getElementById(`inp-sum-${i}`).value, 10);
+                    const expVal = parseInt(revTotal[i], 10);
+
+                    if (inpVal !== expVal) {
+                        mostrarFeedback(`Revisa la suma en la columna ${i + 1} desde la derecha.`, true);
+                        return;
+                    }
+                }
+
+                // Fijar resultado final
+                for (let i = 0; i < revTotal.length; i++) {
+                    const col = numCols - 1 - i;
+                    document.getElementById(`cell-${rowSum}-${col}`).textContent = revTotal[i];
+                }
+
+                finalizarMultiplicacion();
+            }
+        }
+
+        function finalizarMultiplicacion() {
+            const total = A * B;
+            mostrarFeedback(`🏆 ¡Extraordinario! ${A.toLocaleString('es-ES')} × ${B.toLocaleString('es-ES')} = ${total.toLocaleString('es-ES')}.`, false);
+            document.getElementById('btnCheck').textContent = "¡Completado con Éxito! 🎉";
+            document.getElementById('btnCheck').disabled = true;
+
+            document.querySelectorAll('.guide-card').forEach(c => c.classList.remove('active'));
+            const lastCard = document.getElementById(`card-step${totalEtapas}`);
+            if (lastCard) lastCard.classList.add('completed');
+        }
+
+        function actualizarTarjetasGuia(num) {
+            document.querySelectorAll('.guide-card').forEach((card, idx) => {
+                const stepIdx = idx + 1;
+                card.classList.toggle('active', stepIdx === num);
+                card.classList.toggle('completed', stepIdx < num);
+            });
+        }
+
+        function mostrarFeedback(msg, esError) {
+            const fb = document.getElementById('feedback');
+            fb.textContent = msg;
+            fb.className = "feedback-banner " + (esError ? "error" : "success");
+        }
+
+        window.onload = iniciarEjercicio;
+    </script>
+</body>
+</html>
